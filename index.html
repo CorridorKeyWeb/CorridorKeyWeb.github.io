@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>CorridorKey Web</title><style>
+<title>CorridorKey Web (single file)</title><style>
 :root{--bg:#141517;--panel:#1c1e21;--line:#2c2f33;--fg:#d8dadd;--dim:#8a8f96;--acc:#3b82f6}
 *{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:13px system-ui,sans-serif}
 header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
@@ -103,8 +103,8 @@ progress{width:100%;height:8px}#err{color:#ff8b8b;white-space:pre-wrap;padding:6
         <label>Frame <input id="vframe" type="range" min="0" max="0" value="0"><output></output></label>
         <label>Frame rate <input id="fps" type="number" min="1" max="120" step="0.001" value="24"></label>
         <label class="chk"><input id="tofolder" type="checkbox"> Write frames to a folder (Chromium; no memory growth)</label>
-        <button id="xvid">Process video → PNG sequence</button>
-        <div class="dim">Alpha-capable video encoding (WebM/ProRes 4444) is not available in browsers reliably; audio is not exported.</div></div>
+        <button id="xvid">Process video → MP4</button>
+        <div class="dim">Exports an H.264 MP4 with your selected background. Video is processed frame-by-frame; original audio is not included. Requires a browser with WebCodecs H.264 encoding support and internet access to load the MP4 encoder.</div></div>
     </details>
     <details id="helpbox"><summary>Where do I get the model?</summary>
       <p class="dim"><b>Easiest:</b> download <code>CorridorKey_v1.0.safetensors</code> (~400&nbsp;MB, huggingface.co/nikopueringer/CorridorKey_v1.0) and press <b>Load .safetensors</b>. The page builds the network from it locally; nothing is uploaded.</p>
@@ -1246,29 +1246,61 @@ const exportPng = (mode, suffix) => guard(async () => {
 });
 
 /* ---------- video ---------- */
+let mp4ModulePromise = null;
+async function getMp4Module() {
+  if (!('VideoEncoder' in window)) throw new Error('MP4 export needs WebCodecs (VideoEncoder). Try the latest Chrome or Edge.');
+  if (!mp4ModulePromise) mp4ModulePromise = import('https://cdn.jsdelivr.net/npm/mediabunny/+esm');
+  return await mp4ModulePromise;
+}
 const runVideo = guard(async () => {
   if (st.media !== 'video' || st.busy) return;
-  st.busy = true; st.cancel = false; ui(); await ensureModel();
-  st.fps = +$('fps').value; const v = $('vid'), n = Math.floor(v.duration * st.fps), pad = (i) => String(i + 1).padStart(String(n).length, '0');
-  let dir = null, zip = null;
-  if ($('tofolder').checked) { if (!window.showDirectoryPicker) throw new Error('Writing to a folder needs a Chromium-based browser. Untick the option to get a ZIP instead.'); dir = await window.showDirectoryPicker({ mode: 'readwrite' }); }
-  else zip = new ZipWriter();
-  const t0 = performance.now(); let done = 0, err = null;
+  st.busy = true; st.cancel = false; ui();
+  let done = 0, output = null, source = null, t0 = performance.now();
   try {
+    await ensureModel();
+    const { Output, Mp4OutputFormat, BufferTarget, CanvasSource } = await getMp4Module();
+    const v = $('vid');
+    st.fps = Math.max(1, Math.min(120, +$('fps').value || 24));
+    const n = Math.max(1, Math.floor(v.duration * st.fps));
+    // H.264 requires even dimensions. Keep the full image and pad the right/bottom edge if needed.
+    const ow = st.w + (st.w % 2), oh = st.h + (st.h % 2);
+    const encCanvas = document.createElement('canvas'); encCanvas.width = ow; encCanvas.height = oh;
+    const encCtx = encCanvas.getContext('2d', { alpha: false });
+    output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
+    source = new CanvasSource(encCanvas, { codec: 'avc', bitrate: Math.min(20_000_000, Math.max(2_000_000, ow * oh * st.fps * 0.12)) });
+    output.addVideoTrack(source, { frameRate: st.fps });
+    await output.start();
     for (let i = 0; i < n && !st.cancel; i++) {
       await setVideoFrame(i);
       await inferCurrent();
-      const { png } = await call('png', { mode: 'straight' }), name = `${st.name}_${pad(i)}.png`;
-      if (dir) { const fh = await dir.getFileHandle(name, { create: true }), w = await fh.createWritable(); await w.write(png); await w.close(); } else zip.add(name, new Uint8Array(png));
-      done++; $('prog').value = done / n; const el = (performance.now() - t0) / 1000;
-      setStatus(`Frame ${done}/${n}` + (done >= 2 ? ` · ~${Math.ceil(el / done * (n - done))}s left` : ''));
-      if (i % 5 === 0) { $('vframe').value = i; await refresh(); }
+      const { png } = await call('png', { mode: 'comp', bg: st.bg });
+      const bmp = await createImageBitmap(new Blob([png], { type: 'image/png' }));
+      encCtx.fillStyle = '#000'; encCtx.fillRect(0, 0, ow, oh);
+      encCtx.drawImage(bmp, 0, 0, st.w, st.h); bmp.close();
+      await source.add(i / st.fps, 1 / st.fps);
+      done++; $('prog').value = done / n;
+      const elapsed = (performance.now() - t0) / 1000;
+      setStatus(`Encoding MP4 · frame ${done}/${n}` + (done >= 2 ? ` · ~${Math.ceil(elapsed / done * (n - done))}s left` : ''));
+      if (i % 3 === 0) { $('vframe').value = i; await refresh(); }
     }
-  } catch (e) { err = e; }
-  if (zip && done) download(zip.finish(), `${st.name}_frames${st.cancel || err ? '_partial' : ''}.zip`);
-  st.busy = false; ui(); await refresh();
-  if (err) throw new Error(`Stopped at frame ${done + 1}: ${err.message}` + (done ? ` (${done} completed frames were saved)` : ''));
-  setStatus(st.cancel ? `Cancelled after ${done} frames` : `Finished: ${done} frames in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+    if (st.cancel) {
+      try { await output.cancel(); } catch {}
+      setStatus(`Cancelled after ${done} frames; MP4 was not saved.`);
+    } else {
+      setStatus('Finalizing MP4…');
+      await output.finalize();
+      const buffer = output.target.buffer;
+      if (!buffer || !buffer.byteLength) throw new Error('The MP4 encoder returned an empty file.');
+      download(new Blob([buffer], { type: 'video/mp4' }), `${st.name}_keyed.mp4`);
+      setStatus(`Finished: ${done} frames · ${(buffer.byteLength / 1048576).toFixed(1)} MB · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+    }
+  } catch (e) {
+    try { if (output?.cancel) await output.cancel(); } catch {}
+    throw new Error(`MP4 export stopped after ${done} frames: ${e.message}`);
+  } finally {
+    st.busy = false; ui();
+    try { await refresh(); } catch {}
+  }
 });
 
 /* ---------- wiring ---------- */
