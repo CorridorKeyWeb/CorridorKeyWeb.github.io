@@ -24,7 +24,7 @@ aside label{display:block;margin:5px 0}aside label input[type=range]{width:100%;
 progress{width:100%;height:6px}#err{color:#e88;white-space:pre-wrap;padding:6px}#err:empty{display:none}
 #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;border:1px dashed #444;margin:20px;border-radius:3px;color:var(--dim);line-height:1.8}
 #stage.over #drop{border-color:var(--acc)}#wrap{display:inline-block;margin:20px}canvas{display:block;image-rendering:pixelated}
-#split{position:absolute;left:20px;right:20px;bottom:8px;width:calc(100% - 40px)}hr{border:0;border-top:1px solid var(--line)}
+#split{position:absolute;left:20px;right:20px;bottom:8px;width:calc(100% - 40px)}hr{border:0;border-top:1px solid var(--line)}[hidden]{display:none!important}
 
 @media (max-width:820px){
  html,body{height:auto;min-height:100%;-webkit-text-size-adjust:100%}
@@ -92,11 +92,13 @@ details{border-radius:0}
     </section>
     <details open><summary>1 · Model & performance</summary>
       <div class="row"><label class="btn sm primary">Load .safetensors<input id="stfile" type="file" hidden></label>
-      <label>Size <select id="stsize"><option value="512" selected>512 (fast)</option><option value="768">768</option><option value="1024">1024 (heavy)</option><option value="2048">2048 (native, very heavy)</option></select></label></div>
+      <label>Size <select id="stsize"><option value="512" selected>512 (fast)</option><option value="768">768</option><option value="1024">1024</option><option value="2048">2048 (native, very heavy)</option><option value="custom">Custom…</option></select></label></div>
+      <div class="row" id="customsize" hidden><label>Custom size (px) <input id="stcustom" type="number" min="256" max="2048" step="64" value="1024" style="width:84px"></label><button id="stapply" class="sm">Apply</button><button id="stmatch" class="sm" title="Use the nearest multiple of 64 to the image's longest side">Match image</button></div>
+      <div id="gpuinfo" class="dim"></div>
       <div class="row"><label class="btn sm">Load .onnx<input id="model" type="file" accept=".onnx" hidden></label><button id="mretry" class="sm" hidden>Retry download</button>
       <select id="backend"><option value="webgpu">WebGPU</option><option value="wasm">WASM (CPU, very slow)</option></select></div>
       <progress id="mprog" value="0" max="1" hidden></progress><div id="modelstat" class="dim">Model downloads automatically.</div>
-      <div class="dim">Experimental: <b>.safetensors</b> builds the network in your browser straight from CorridorKey_v1.0.safetensors (needs ~1–2&nbsp;GB free RAM; best on desktop Chrome/Edge). Size = working resolution; lower is faster but softer.</div>
+      <div class="dim">Experimental: <b>.safetensors</b> builds the network in your browser straight from CorridorKey_v1.0.safetensors (needs ~1–2&nbsp;GB free RAM; best on desktop Chrome/Edge). Size = working resolution; lower is faster but softer. Custom accepts any multiple of 64 from 256 to 2048.</div>
     </details>
     <details><summary>2 · Alpha hint</summary>
       <div class="row"><label><input type="radio" name="hm" value="gen" checked> Generate</label><label><input type="radio" name="hm" value="up"> Upload</label>
@@ -397,16 +399,15 @@ function connectedComponents8(mask, w, h) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       if (!mask[i]) continue;
-      let l = 0;
-      const cand = [];
-      if (x > 0 && labels[i - 1]) cand.push(labels[i - 1]);
-      if (y > 0) {
-        if (x > 0 && labels[i - w - 1]) cand.push(labels[i - w - 1]);
-        if (labels[i - w]) cand.push(labels[i - w]);
-        if (x < w - 1 && labels[i - w + 1]) cand.push(labels[i - w + 1]);
+      // neighbours already visited: W, NW, N, NE (same result as collecting them in an array, without the allocation)
+      const a = x > 0 ? labels[i - 1] : 0, b = y > 0 && x > 0 ? labels[i - w - 1] : 0;
+      const c = y > 0 ? labels[i - w] : 0, d = y > 0 && x < w - 1 ? labels[i - w + 1] : 0;
+      let l = a || b || c || d;
+      if (!l) { l = next; parent[l] = l; next++; }
+      else {
+        if (a && a < l) l = a; if (b && b < l) l = b; if (c && c < l) l = c; if (d && d < l) l = d;
+        if (a) union(l, a); if (b) union(l, b); if (c) union(l, c); if (d) union(l, d);
       }
-      if (!cand.length) { l = next; parent[l] = l; next++; }
-      else { l = Math.min(...cand); for (const c of cand) union(l, c); }
       labels[i] = l;
     }
   const remap = new Int32Array(next);
@@ -853,13 +854,20 @@ function groupNorm8(g, x, key, C, H, W) { // GroupNorm(8, C) = InstanceNorm over
 }
 const resize = (g, x, dims) => g.op('Resize', [x, '', '', g.i64(dims)], { mode: 'linear', coordinate_transformation_mode: 'half_pixel' });
 
-/** Hiera MaskUnitAttention in spatial form. xn: [H*W, Cin]. win = mask-unit size in tokens at block input (0 = global). */
+/** Hiera MaskUnitAttention in spatial form. xn: [H*W, Cin]. win = mask-unit size in tokens at block input (0 = global).
+ *  Memory/speed notes (results are mathematically identical to the plain formulation):
+ *  - Global attention without q-pooling has a single window, so the 6-D window transposes collapse to plain 3-D ones.
+ *  - The score matrix is [nW, heads, Tq, Tk]. At 1024 px a global block has 8 x 4096 x 4096 floats (~0.5 GB), which is
+ *    larger than many WebGPU buffer limits. Each query row's softmax is independent, so the queries are processed in
+ *    chunks (Slice -> MatMul -> Softmax -> MatMul, then Concat) and only one chunk of scores is alive at a time. */
 function attention(g, xn, H, W, Co, heads, win, qpool, pfx) {
-  const hd = Co / heads, w = win || H, nWy = H / w, nWx = W / w;
+  const hd = Co / heads, w = win || H, nWy = H / w, nWx = W / w, nW = nWy * nWx, T = H * W;
   if (H % w || W % w || (qpool && w % 2)) throw new Error(`Inference size incompatible with attention windows (H=${H}, window=${w}).`);
-  const qkv = g.reshape(linear(g, xn, pfx + '.attn.qkv'), [H * W, 3, heads, hd]);
+  const qkv = g.reshape(linear(g, xn, pfx + '.attn.qkv'), [T, 3, heads, hd]);
   const pick = (i) => g.op('Gather', [qkv, g.i64s(i)], { axis: 1 }); // [T, heads, hd]
+  const flat = !win && !qpool; // global attention, one window
   const part = (t, pool) => {
+    if (flat) return g.reshape(g.transpose(t, [1, 0, 2]), [1, heads, T, hd]);
     let s = g.reshape(t, [nWy, w, nWx, w, heads, hd]);
     if (pool) {
       s = g.reshape(s, [nWy, w / 2, 2, nWx, w / 2, 2, heads, hd]);
@@ -870,8 +878,16 @@ function attention(g, xn, H, W, Co, heads, win, qpool, pfx) {
   };
   const q = g.op('Mul', [part(pick(0), qpool), g.f32c(Math.pow(hd, -0.5))]);
   const k = part(pick(1), false), v = part(pick(2), false);
-  const att = g.op('Softmax', [g.op('MatMul', [q, g.transpose(k, [0, 1, 3, 2])])], { axis: -1 });
-  const o = g.op('MatMul', [att, v]); // [nW, heads, Tq, hd]
+  const kT = g.transpose(k, [0, 1, 3, 2]);
+  const Tq = qpool ? (w / 2) * (w / 2) : w * w, Tk = w * w;
+  const nCh = Math.min(256, Math.max(1, Math.ceil((nW * heads * Tq * Tk) / g.attChunk)));
+  const step = Math.ceil(Tq / nCh), outs = [];
+  for (let s0 = 0; s0 < Tq; s0 += step) {
+    const qc = nCh === 1 ? q : g.op('Slice', [q, g.i64([s0]), g.i64([Math.min(Tq, s0 + step)]), g.i64([2])]);
+    outs.push(g.op('MatMul', [g.op('Softmax', [g.op('MatMul', [qc, kT])], { axis: -1 }), v])); // [nW, heads, chunk, hd]
+  }
+  const o = outs.length === 1 ? outs[0] : g.op('Concat', outs, { axis: 2 }); // [nW, heads, Tq, hd]
+  if (flat) return linear(g, g.reshape(g.transpose(o, [0, 2, 1, 3]), [T, Co]), pfx + '.attn.proj');
   const wq = qpool ? w / 2 : w, Hq = qpool ? H / 2 : H, Wq = qpool ? W / 2 : W;
   const m = g.reshape(g.transpose(g.reshape(o, [nWy, nWx, heads, wq, wq, hd]), [0, 3, 1, 4, 2, 5]), [Hq * Wq, Co]);
   return linear(g, m, pfx + '.attn.proj');
@@ -946,9 +962,9 @@ function resizePosEmbed(src, gs, gd, C) {
 }
 
 /** Returns { model: Uint8Array (ONNX, weights external), location, S }.  S must be a multiple of 64 (typ. 512/768/1024/2048). */
-function buildGreenFormer(st, S, { debug = false, location = WEIGHTS_LOCATION } = {}) {
+function buildGreenFormer(st, S, { debug = false, location = WEIGHTS_LOCATION, attChunk = 1 << 24 } = {}) {
   if (S % 64) throw new Error('Inference size must be a multiple of 64.');
-  const g = new G(st, location), Gs = S / 4;
+  const g = new G(st, location), Gs = S / 4; g.attChunk = attChunk;
   // block configuration (timm hiera_base_plus: stages 2/3/16/3, embed 112, heads x2 per stage, mask-unit attention lags one block)
   const cfgs = [];
   { let mu = 8; // mask unit in tokens at current resolution
@@ -1076,13 +1092,24 @@ async function loadOrt() {
   let lastErr;
   for (const base of [CONFIG.ortCdn, new URL('vendor/ort/', location.href).href]) {
     for (const f of ['ort.all.min.mjs', 'ort.webgpu.min.mjs']) {
-      try { ort = await import(/* @vite-ignore */ base + f); ort.env.wasm.wasmPaths = base; return ort; } catch (e) { lastErr = e; }
+      try { ort = await import(/* @vite-ignore */ base + f); ort.env.wasm.wasmPaths = base; try { ort.env.webgpu.powerPreference = 'high-performance'; } catch {} return ort; } catch (e) { lastErr = e; }
     }
   }
   throw new Error('Could not load ONNX Runtime Web from the CDN or vendor/ort/. ' + (lastErr?.message || ''));
 }
 
 const hasWebGPU = () => typeof navigator !== 'undefined' && !!navigator.gpu;
+// Largest tensor at working size S is the refiner's [1,64,S,S] float32 (and the decoder's [1,1024,S/4,S/4]): 256*S^2 bytes.
+const bufNeed = (S) => 256 * S * S;
+const maxSizeForBuf = (buf) => Math.floor(Math.sqrt(buf / 256) / 64) * 64;
+async function probeGpu() {
+  try {
+    if (!hasWebGPU()) return null;
+    const a = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+    if (!a) return null;
+    return { buf: Math.min(a.limits.maxStorageBufferBindingSize, a.limits.maxBufferSize) };
+  } catch { return null; }
+}
 
 async function loadModel(bytes, { backend = 'webgpu', onStatus = () => {} } = {}) {
   onStatus('Loading ONNX Runtime…');
@@ -1236,7 +1263,7 @@ async function inferCurrent(onStage = () => {}) {
   const S = modelInfo().S || 2048, t0 = performance.now();
   if (!st.hintReady) await makeHint();
   onStage('pre'); const { tensor } = await call('pre', { S }); const t1 = performance.now();
-  onStage('model'); const out = await runModel(new Float32Array(tensor), S, +$('refiner').value); const t2 = performance.now();
+  onStage('model'); let out; try { out = await runModel(new Float32Array(tensor), S, +$('refiner').value); } catch (e) { throw new Error(`${e.message || e}${S >= 1024 ? `\nIf this is a GPU memory error, pick a smaller size (768, or Custom…) and load the model again.` : ''}`); } const t2 = performance.now();
   onStage('post'); await call('post', { alpha: out.alpha.buffer, fg: out.fg.buffer, S, opts: params() }, [out.alpha.buffer, out.fg.buffer]); const t3 = performance.now();
   st.hasRaw = st.hasResult = true;
   return { pre: t1 - t0, model: t2 - t1, post: t3 - t2 };
@@ -1349,19 +1376,33 @@ stage.ondragover = (e) => { e.preventDefault(); stage.classList.add('over'); }; 
 stage.ondrop = guard(async (e) => { e.preventDefault(); stage.classList.remove('over'); if (e.dataTransfer.files[0]) await loadFile(e.dataTransfer.files[0]); });
 stage.addEventListener('wheel', (e) => { if (e.ctrlKey && st.w) { e.preventDefault(); setZoom(st.zoom * (e.deltaY < 0 ? 1.1 : 0.9)); } }, { passive: false });
 $('zfit').onclick = fit; $('z100').onclick = () => setZoom(1); $('zin').onclick = () => setZoom(st.zoom * 1.25); $('zout').onclick = () => setZoom(st.zoom / 1.25);
-let stBytes = null;
+let stFile = null, loadedSize = 0, gpu = null;
+const snapSize = (v) => Math.max(256, Math.min(2048, Math.round((+v || 1024) / 64) * 64));
+const sizeOf = () => ($('stsize').value === 'custom' ? snapSize($('stcustom').value) : +$('stsize').value);
+const syncSizeUI = () => { $('customsize').hidden = $('stsize').value !== 'custom'; };
+const showGpuInfo = () => { $('gpuinfo').textContent = gpu ? `GPU buffer limit ${(gpu.buf / 1048576).toFixed(0)} MB · fits sizes up to about ${maxSizeForBuf(gpu.buf)} px (total memory may limit sooner)` : ''; };
+probeGpu().then((g) => { gpu = g; showGpuInfo(); });
 const loadST = async () => {
-  const S = +$('stsize').value, say = (m) => { setStatus(m); mstat(m); };
-  const info = await loadSafetensors(stBytes, S, { backend: $('backend').value, onStatus: say });
-  loadedKey = 'local-file'; st.hasRaw = st.hasResult = false;
+  if (!stFile) throw new Error('Load a .safetensors file first.');
+  const S = sizeOf(), say = (m) => { setStatus(m); mstat(m); };
+  if (gpu && $('backend').value === 'webgpu' && bufNeed(S) > gpu.buf)
+    throw new Error(`Size ${S} needs GPU buffers of about ${(bufNeed(S) / 1048576).toFixed(0)} MB, but this GPU allows ${(gpu.buf / 1048576).toFixed(0)} MB. Largest size that fits: ${maxSizeForBuf(gpu.buf)}.`);
+  say(`Reading ${stFile.name} (${(stFile.size / 1048576).toFixed(0)} MB)…`);
+  let bytes;
+  try { bytes = new Uint8Array(await stFile.arrayBuffer()); } catch (e) { throw new Error(`Could not read ${stFile.name} again (${e.message}). Choose the file again with Load .safetensors.`); }
+  let info;
+  try { info = await loadSafetensors(bytes, S, { backend: $('backend').value, onStatus: say }); } finally { bytes = null; } // our copy is released once the session exists
+  loadedKey = 'local-file'; loadedSize = S; st.hasRaw = st.hasResult = false;
   mstat(`Model ready (experimental, from .safetensors) · size ${info.S} · ${info.backend}`); setStatus('Model ready'); ui();
 };
 $('stfile').onchange = guard(async (e) => {
   const f = e.target.files[0]; if (!f) return; e.target.value = '';
-  mstat(`Reading ${f.name} (${(f.size / 1048576).toFixed(0)} MB)…`); setStatus('Reading checkpoint…'); $('mprog').hidden = true;
-  stBytes = null; stBytes = new Uint8Array(await f.arrayBuffer()); await loadST();
+  $('mprog').hidden = true; stFile = f; await loadST();
 });
-$('stsize').onchange = guard(async () => { if (stBytes) await loadST(); });
+$('stsize').onchange = guard(async () => { syncSizeUI(); if (stFile && $('stsize').value !== 'custom') await loadST(); });
+$('stapply').onclick = guard(async () => { const S = snapSize($('stcustom').value); $('stcustom').value = S; if (stFile) await loadST(); else mstat(`Custom size ${S} set. Load a .safetensors file to use it.`); });
+$('stcustom').onchange = () => { $('stcustom').value = snapSize($('stcustom').value); };
+$('stmatch').onclick = () => { if (!st.w) { showErr('Load an image or video first.'); return; } $('stcustom').value = snapSize(Math.max(st.w, st.h)); };
 $('model').onchange = guard(async (e) => { const f = e.target.files[0]; if (!f) return; setStatus('Reading model…'); await doLoadModel(new Uint8Array(await f.arrayBuffer())); loadedKey = 'local-file'; });
 $('hintfile').onchange = guard(async (e) => { const f = e.target.files[0]; if (!f) return; st.hintBitmap = await createImageBitmap(f); document.querySelector('input[name=hm][value=up]').checked = true; st.hintReady = false; if (st.orig) { await makeHint(); if (st.view === 'hint') await refresh(); } });
 ['h_thr', 'h_soft', 'h_erode', 'h_feather', 'screen'].forEach((id) => $(id).addEventListener('input', () => { st.hintReady = false; liveHint(); if (id === 'screen') { repost(); st.hasRaw = false; if (modelUrlFor(+$('screen').value) && loadedKey !== 'local-file') guard(ensureModel)(); } }));
@@ -1381,7 +1422,7 @@ $('reset').onclick = guard(async () => {
     else if (el.tagName === 'SELECT') [...el.options].forEach((o, i) => { if (o.defaultSelected) el.selectedIndex = i; }); else el.value = el.defaultValue;
     el.dispatchEvent(new Event('input'));
   });
-  $('genctl').hidden = false; st.hintBitmap = null; st.hintReady = false; st.bg = { type: 'checker' }; $('bgimgctl').hidden = true; showErr('');
+  syncSizeUI(); $('genctl').hidden = false; st.hintBitmap = null; st.hintReady = false; st.bg = { type: 'checker' }; $('bgimgctl').hidden = true; showErr('');
   if (st.orig) { fit(); if (st.hasRaw) { await call('repost', { opts: params() }); } await refresh(); }
 });
 $('mretry').onclick = guard(ensureModel);
@@ -1390,7 +1431,7 @@ $('drop').onclick = () => $('file').click();
   stage.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { d0 = dist(e.touches); z0 = st.zoom; } }, { passive: true });
   stage.addEventListener('touchmove', (e) => { if (e.touches.length === 2 && d0 && st.w) { e.preventDefault(); setZoom(z0 * dist(e.touches) / d0); } }, { passive: false });
   stage.addEventListener('touchend', () => { d0 = 0; }); })();
-$('backend').onchange = guard(async () => { if (stBytes) { await loadST(); return; } if (loadedKey && loadedKey !== 'local-file') { loadedKey = null; await ensureModel(); } });
+$('backend').onchange = guard(async () => { if (stFile) { await loadST(); return; } if (loadedKey && loadedKey !== 'local-file') { loadedKey = null; await ensureModel(); } });
 if (!hasWebGPU()) { $('backend').value = 'wasm'; showErr('WebGPU is not available in this browser or context (needs Chrome/Edge over HTTPS). Only the very slow WASM backend can be used.'); }
 // Beginner presets: convenience values only; all original controls remain available.
 const presetTips = {
@@ -1409,7 +1450,7 @@ document.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('cl
     const el = $(id); if (!el) continue; el.value = value; el.dispatchEvent(new Event('input'));
   }
   $('quicktip').textContent = presetTips[p];
-  if (stBytes && $('stsize').value !== String(values.stsize)) await loadST();
+  syncSizeUI(); if (stFile && loadedSize && loadedSize !== sizeOf()) await loadST();
   document.querySelectorAll('[data-preset]').forEach(x => x.style.outline = x === b ? '2px solid var(--acc)' : 'none');
 })));
 $('quickprocess').onclick = () => st.media === 'video' ? setVideoFrame(+$('vframe').value).then(runFrame) : runFrame();
