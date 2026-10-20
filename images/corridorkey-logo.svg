@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" role="img" aria-label="Corridor Digital logo">
+  <title>Corridor Digital</title>
+  <g fill="#F5E300">
+    <polygon points="5,120 320,120 450,280 320,440 5,440 180,280"/>
+    <polygon points="180,120 470,120 610,280 470,440 180,440 330,280"/>
+    <polygon points="470,120 760,120 900,280 760,440 470,440 620,280"/>
+    <polygon points="760,120 1070,120 1200,280 1070,440 760,440 910,280"/>
+  </g>
+  <g fill="#ffffff">
+    <polygon points="330,120 440,120 270,280 440,440 330,440 160,280"/>
+    <polygon points="610,120 760,120 630,280 760,440 610,440 470,280"/>
+    <polygon points="900,120 1070,120 940,280 1070,440 900,440 760,280"/>
+    <polygon points="1200,120 1340,120 1180,280 1340,440 1200,440 1040,280"/>
+  </g>
+  <g fill="#F5E300" font-family="'Arial Black', Impact, 'Segoe UI', sans-serif" font-weight="900" letter-spacing="10">
+    <text x="760" y="270" font-size="200">CORRIDOR</text>
+    <text x="1040" y="410" font-size="86">DIGITAL</text>
+  </g>
+</svg>
