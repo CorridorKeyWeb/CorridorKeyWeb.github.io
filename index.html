@@ -1,14 +1,992 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CorridorKey Studio</title><style>
+:root{--bg:#121212;--panel:#181818;--line:#2c2c2c;--fg:#e7e5df;--dim:#98958d;--acc:#f8ef25;--field:#222}
+*{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:#161616;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:8px;min-width:max-content}
+.brand img{display:block;width:78px;height:32px;object-fit:contain}
+.brand strong{font-size:14px;font-weight:600;color:var(--fg)}
+.brand .brand-sub{font-size:12px;font-weight:400;color:var(--dim);margin-left:4px}
+
+main{display:flex;height:calc(100% - 49px)}#stage{flex:1;position:relative;overflow:auto;background:#0e0e0e;min-width:0}
+aside{width:310px;overflow:auto;border-left:1px solid var(--line);background:var(--panel);padding:6px 10px}
+button,.btn,select,input[type=number]{background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:3px;padding:4px 9px;cursor:pointer;font:inherit}
+button:hover,.btn:hover{border-color:#6b6b6b}button:disabled{opacity:.4;cursor:default}button:disabled:hover{border-color:var(--line)}
+.primary{background:var(--acc);border-color:var(--acc);color:#111;font-weight:600}.primary:hover{border-color:#fff}
+.sm{padding:2px 7px}.seg button{border-radius:0}.seg button.on{background:var(--acc);border-color:var(--acc);color:#111}.grow{flex:1}.dim{color:var(--dim);font-size:12px}
+input[type=range],progress,input[type=checkbox],input[type=radio]{accent-color:var(--acc)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+details{border-bottom:1px solid var(--line);padding:4px 2px 8px}summary{cursor:pointer;font-weight:600;padding:5px 0}
+aside label{display:block;margin:5px 0}aside label input[type=range]{width:100%;display:block}aside output{float:right;color:var(--dim)}
+.row{display:flex;gap:6px;align-items:center;margin:5px 0;flex-wrap:wrap}.chk{display:flex;gap:6px;align-items:center}
+progress{width:100%;height:6px}#err{color:#e88;white-space:pre-wrap;padding:6px}#err:empty{display:none}
+#drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;border:1px dashed #444;margin:20px;border-radius:3px;color:var(--dim);line-height:1.8}
+#stage.over #drop{border-color:var(--acc)}#wrap{display:inline-block;margin:20px}canvas{display:block;image-rendering:pixelated}
+#split{position:absolute;left:20px;right:20px;bottom:8px;width:calc(100% - 40px)}hr{border:0;border-top:1px solid var(--line)}[hidden]{display:none!important}
+
+@media (max-width:820px){
+ html,body{height:auto;min-height:100%;-webkit-text-size-adjust:100%}
+ body{padding-bottom:env(safe-area-inset-bottom)}
+ header{padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top));gap:6px}
+ .brand{flex:1 1 100%;min-width:0}.brand img{width:70px;height:28px}
+ .seg{order:5;display:flex;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+ .seg::-webkit-scrollbar{display:none}.seg button{flex:0 0 auto}
+ .grow{display:none}
+ main{flex-direction:column;height:auto}
+ #stage{flex:none;height:50vh;height:50dvh;position:sticky;top:0;z-index:5;touch-action:pan-x pan-y;border-bottom:1px solid var(--line)}
+ aside{width:100%;border-left:0;overflow:visible;padding:8px 12px calc(24px + env(safe-area-inset-bottom))}
+ button,.btn,select,input[type=number]{min-height:42px;font-size:16px;padding:6px 12px}
+ .sm{min-height:38px;padding:4px 10px}
+ input[type=range]{height:32px}
+ summary{padding:10px 0;font-size:15px}
+ .dim{font-size:13px}
+ #drop{margin:10px;font-size:15px}
+ #wrap{margin:10px}
+ #split{bottom:12px}
+ .row{gap:8px}
+}
+
+#quickstart{border-bottom:1px solid var(--line);padding:8px 2px 12px;margin:0 0 4px}
+#quickstart h2{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--fg)}
+#quickstart p{margin:4px 0 8px}
+.preset{flex:1;min-width:82px;padding:7px 5px;border-radius:3px;text-align:left}
+.preset strong{display:block;color:var(--fg);font-size:12px;font-weight:600}
+#quicktip{border-left:2px solid #555;padding:4px 9px;margin-top:8px}
+details{border-radius:0}
+#helpbox pre{background:#0e0e0e;border:1px solid var(--line);padding:6px;overflow:auto;font-size:11px;user-select:all}#helpbox p{margin:6px 0}
+</style>
+</head><body>
+<header>
+  <div class="brand">
+    <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNi4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2[...]
+    <strong>CorridorKey <span class="brand-sub">WEB STUDIO</span></strong>
+  </div>
+  <label class="btn">Import media<input id="file" type="file" accept="image/png,image/jpeg,image/webp,video/*" hidden></label>
+  <div class="seg" id="views">
+    <button data-v="orig">Original</button><button data-v="comp" class="on">Result</button><button data-v="alpha">Alpha</button>
+    <button data-v="fg">Foreground</button><button data-v="hint">Hint</button><button data-v="spill">Spill removed</button><button data-v="split">Before/After</button>
+  </div>
+  <span class="grow"></span>
+  <button id="zfit">Fit</button><button id="z100">100%</button><button id="zout">−</button><button id="zin">+</button><span id="zlabel" class="dim">100%</span>
+  <button id="reset">Reset</button>
+</header>
+<main>
+  <section id="stage"><div id="drop">Drop a photo or video here<br><span class="dim">or tap to browse · PNG, JPEG, WebP, MP4, WebM</span></div>
+    <div id="wrap" hidden><canvas id="cv" class="checker"></canvas></div>
+    <input id="split" type="range" min="0" max="100" value="50" hidden>
+    <video id="vid" muted playsinline hidden></video>
+  </section>
+  <aside>
+    <section id="quickstart">
+      <h2>Quick start</h2>
+      <p class="dim">1. Load your clip or image · 2. Load the model · 3. Press Process. Start with a preset, then fine-tune if needed.</p>
+      <div class="row">
+        <button class="preset" data-preset="balanced"><strong>Balanced</strong><span class="dim">Good start</span></button>
+        <button class="preset" data-preset="hair"><strong>Fine detail</strong><span class="dim">Hair / edges</span></button>
+        <button class="preset" data-preset="fast"><strong>Fast preview</strong><span class="dim">Lower load</span></button>
+      </div>
+      <div id="quicktip" class="dim">Tip: the generated hint is only a rough guide. For the cleanest key, use a good uploaded alpha hint when available.</div>
+      <div class="row"><button id="quickprocess" class="primary" style="flex:1">Process image / current frame</button><button id="showadvanced">Advanced controls</button></div>
+    </section>
+    <details open><summary>1 · Model & performance</summary>
+      <div class="row"><label class="btn sm primary">Load .safetensors<input id="stfile" type="file" hidden></label>
+      <label>Size <select id="stsize"><option value="512" selected>512 (fast)</option><option value="768">768</option><option value="1024">1024</option><option value="2048">2048 (native, very heavy)</option><option value="custom">Custom…</option></select></label></div>
+      <div class="row" id="customsize" hidden><label>Custom size (px) <input id="stcustom" type="number" min="256" max="2048" step="64" value="1024" style="width:84px"></label><button id="stapply" class="sm">Apply</button><button id="stmatch" class="sm">Match media</button></div>
+      <div id="gpuinfo" class="dim"></div>
+      <div class="row"><label class="btn sm">Load .onnx<input id="model" type="file" accept=".onnx" hidden></label><button id="mretry" class="sm" hidden>Retry download</button>
+      <select id="backend"><option value="webgpu">WebGPU</option><option value="wasm">WASM (CPU, very slow)</option></select></div>
+      <progress id="mprog" value="0" max="1" hidden></progress><div id="modelstat" class="dim">Model downloads automatically.</div>
+      <div class="dim">Experimental: <b>.safetensors</b> builds the network in your browser straight from CorridorKey_v1.0.safetensors (needs ~1–2&nbsp;GB free RAM; best on desktop Chrome/Edge). Size = working resolution; lower is faster but softer. Custom accepts any multiple of 64 from 256 to 2048.</div>
+    </details>
+    <details><summary>2 · Alpha hint</summary>
+      <div class="row"><label><input type="radio" name="hm" value="gen" checked> Generate</label><label><input type="radio" name="hm" value="up"> Upload</label>
+      <label class="btn sm">Choose hint<input id="hintfile" type="file" accept="image/*" hidden></label></div>
+      <div class="row"><label>Screen <select id="screen"><option value="1">Green</option><option value="2">Blue</option></select></label></div>
+      <div id="genctl">
+      <label>Threshold <input id="h_thr" type="range" min="0" max="0.5" step="0.01" value="0.12"><output></output></label>
+      <label>Softness <input id="h_soft" type="range" min="0.01" max="0.5" step="0.01" value="0.1"><output></output></label>
+      <label>Erode (px) <input id="h_erode" type="range" min="0" max="60" step="1" value="6"><output></output></label>
+      <label>Feather (px) <input id="h_feather" type="range" min="0" max="60" step="1" value="8"><output></output></label>
+      <div class="dim">Helper only — the original needs a coarse hint from you, GVM, VideoMaMa or BiRefNet.</div></div>
+    </details>
+    <details><summary>3 · Key (advanced parameters)</summary>
+      <label>Refiner strength <input id="refiner" type="range" min="0" max="2" step="0.05" value="1"><output></output></label>
+      <label>Desspill strength <input id="despill" type="range" min="0" max="1" step="0.05" value="1"><output></output></label>
+      <label class="chk"><input id="despk" type="checkbox" checked> Auto-despeckle</label>
+      <label>Despeckle size (px) <input id="despksz" type="range" min="0" max="3000" step="50" value="400"><output></output></label>
+      <label>Output resampling <select id="resamp"><option value="bilinear">Bilinear (original GPU path)</option><option value="lanczos4">Lanczos4 (original CPU path)</option></select></label>
+      <div class="dim">Refiner strength needs a re-run; the others update live.</div>
+    </details>
+    <details><summary>4 · Background & compositing</summary>
+      <div class="row"><select id="bgtype"><option value="checker">Transparent (checkerboard)</option><option value="color">Solid colour</option><option value="image">Image</option></select><input id="bgcolor" type="color" value="#ffffff" style="width:42px;height:28px;padding:0;border:none;background:transparent"></div>
+      <div id="bgimgctl" hidden><label class="btn sm">Choose image<input id="bgfile" type="file" accept="image/*" hidden></label>
+        <label>Fit <select id="bgfit"><option>cover</option><option>contain</option><option>stretch</option></select></label>
+        <label>Scale <input id="bgscale" type="range" min="0.1" max="4" step="0.05" value="1"><output></output></label>
+        <label>X offset <input id="bgx" type="range" min="-1" max="1" step="0.01" value="0"><output></output></label>
+        <label>Y offset <input id="bgy" type="range" min="-1" max="1" step="0.01" value="0"><output></output></label></div>
+    </details>
+    <details open><summary>5 · Process & export</summary>
+      <div class="row"><button id="run" class="primary">Process frame</button><button id="cancel" disabled>Cancel</button></div>
+      <progress id="prog" value="0" max="1"></progress><div id="status" class="dim">Idle</div>
+      <div class="row"><button id="xpng">PNG (straight RGBA)</button><button id="xcomp">Comp PNG</button><button id="xalpha">Alpha PNG</button></div>
+      <div id="vctl" hidden><hr>
+        <label>Frame <input id="vframe" type="range" min="0" max="0" value="0"><output></output></label>
+        <label>Frame rate <input id="fps" type="number" min="1" max="120" step="0.001" value="24"></label>
+        <label class="chk"><input id="tofolder" type="checkbox"> Write frames to a folder (Chromium; no memory growth)</label>
+        <button id="xvid">Process video → MP4</button>
+        <div class="dim">Exports an H.264 MP4 with your selected background. Video is processed frame-by-frame; original audio is not included. Requires a browser with WebCodecs H.264 encoding support.</div>
+      </div>
+    </details>
+    <details id="helpbox"><summary>Where do I get the model?</summary>
+      <p class="dim"><b>Easiest:</b> download <code>CorridorKey_v1.0.safetensors</code> (~400&nbsp;MB, huggingface.co/nikopueringer/CorridorKey_v1.0) and press <b>Load .safetensors</b>. The page no longer downloads models automatically; you must load the file yourself.</p>
+      <p class="dim"><b>Alternative:</b> export an ONNX once with the original repo:</p>
+      <pre>pip install torch timm safetensors onnx onnxruntime
+python export_onnx.py --repo /path/to/CorridorKey-main \
+  --weights CorridorKey_v1.0.safetensors \
+  --img-size 1024 --out CorridorKey.onnx --verify</pre>
+      <div class="row"><button id="dlexport" class="sm">Download export_onnx.py</button></div>
+      <p class="dim">WebGPU needs Chrome/Edge over HTTPS (or localhost). 2048 is the native size but very heavy for browsers.</p>
+      <p class="dim">CorridorKey by Corridor Digital, CC BY-NC-SA 4.0 + Additional Terms. Redistribution of converted models is restricted by those terms.</p>
+    </details>
+    <div id="err" role="alert"></div>
+  </aside>
+</main>
+<script id="export-src" type="text/plain">#!/usr/bin/env python3
+"""Export CorridorKey (GreenFormer) to ONNX for the browser port.
+
+Requires the original repo (CorridorKeyModule) + torch + timm + safetensors + onnx (+ onnxruntime for --verify).
+Weights are NOT included in the source ZIP; download CorridorKey_v1.0.safetensors from
+https://huggingface.co/nikopueringer/CorridorKey_v1.0 (blue: nikopueringer/CorridorKeyBlue_1.0).
+
+  python tools/export_onnx.py --repo /path/to/CorridorKey-main --weights CorridorKey_v1.0.safetensors \
+      --img-size 2048 --out models/CorridorKey.onnx [--verify]
+
+The wrapper re-implements GreenFormer.forward() with an extra `refiner_scale` input (the original applies this via a
+forward hook on the refiner); math is otherwise identical. NOTE: this script could not be executed by the porting
+author (no torch/weights in their environment) — if export fails inside timm's Hiera, see README "Known issues".
+"""
+import argparse, math, os, sys
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--repo', required=True); ap.add_argument('--weights', required=True)
+    ap.add_argument('--img-size', type=int, default=2048); ap.add_argument('--out', default='models/CorridorKey.onnx')
+    ap.add_argument('--opset', type=int, default=17); ap.add_argument('--no-refiner', action='store_true')
+    ap.add_argument('--verify', action='store_true')
+    a = ap.parse_args()
+    sys.path.insert(0, a.repo)
+    import torch, torch.nn as nn, torch.nn.functional as F
+    from CorridorKeyModule.core.model_transformer import GreenFormer
+
+    model = GreenFormer(encoder_name='hiera_base_plus_224.mae_in1k_ft_in_in1k', img_size=a.img_size, use_refiner=not a.no_refiner).eval()
+    if a.weights.endswith('.safetensors'):
+        from safetensors.torch import load_file; sd = load_file(a.weights)
+    else:
+        ck = torch.load(a.weights, map_location='cpu', weights_only=True); sd = ck.get('state_dict', ck)
+    ms, new = model.state_dict(), {}
+    for k, v in sd.items():                       # same loading logic as CorridorKeyEngine._load_model
+        if k.startswith('_orig_mod.'): k = k[10:]
+        if 'pos_embed' in k and k in ms and v.shape != ms[k].shape:
+            gs, gd, C = int(math.sqrt(v.shape[1])), int(math.sqrt(ms[k].shape[1])), v.shape[2]
+            v = F.interpolate(v.permute(0, 2, 1).view(1, C, gs, gs), size=(gd, gd), mode='bicubic', align_corners=False).flatten(2).transpose(1, 2)
+        new[k] = v
+    missing, unexpected = model.load_state_dict(new, strict=False)
+    print('missing:', missing, 'unexpected:', unexpected)
+
+    class Wrap(nn.Module):
+        def __init__(s, m): super().__init__(); s.m = m
+        def forward(s, x, refiner_scale):
+            m = s.m; size = x.shape[2:]
+            feats = m.encoder(x)
+            al = F.interpolate(m.alpha_decoder(feats), size=size, mode='bilinear', align_corners=False)
+            fl = F.interpolate(m.fg_decoder(feats), size=size, mode='bilinear', align_corners=False)
+            if m.use_refiner and m.refiner is not None:
+                d = m.refiner(x[:, :3], torch.cat([torch.sigmoid(al), torch.sigmoid(fl)], 1)) * refiner_scale
+                al, fl = al + d[:, 0:1], fl + d[:, 1:4]
+            return torch.sigmoid(al), torch.sigmoid(fl)
+
+    w = Wrap(model).eval()
+    x = torch.randn(1, 4, a.img_size, a.img_size); rs = torch.tensor(1.0)
+    os.makedirs(os.path.dirname(a.out) or '.', exist_ok=True)
+    with torch.no_grad():
+        torch.onnx.export(w, (x, rs), a.out, input_names=['input', 'refiner_scale'], output_names=['alpha', 'fg'],
+                          opset_version=a.opset, do_constant_folding=True)
+        print('exported', a.out)
+        if a.verify:
+            import onnxruntime as ort, numpy as np
+            s = ort.InferenceSession(a.out, providers=['CPUExecutionProvider'])
+            oa, of = s.run(None, {'input': x.numpy(), 'refiner_scale': np.float32(1.0)})
+            ta, tf = w(x, rs)
+            print('max|alpha diff|', float(np.abs(oa - ta.numpy()).max()), 'max|fg diff|', float(np.abs(of - tf.numpy()).max()))
+
+if __name__ == '__main__': main()
+</script>
+<script id="worker-src" type="text/plain">// Port of CorridorKeyModule/core/color_utils.py (sRGB transfer, despill, composite math).
+// Images are interleaved HWC Float32Array unless stated otherwise.
+
+function srgbToLinear(x) {
+  if (x < 0) x = 0;
+  return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+function linearToSrgb(x) {
+  if (x < 0) x = 0;
+  return x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+}
+
+/** despill_opencv(limit_mode='average'|'max'): luminance-preserving spill removal.
+ *  rgb: HWC float (sRGB, 0-1). Returns a new array (or the input when strength<=0, as the original). */
+function despill(rgb, strength = 1, screenChannel = 1, limitMode = 'average') {
+  if (!(screenChannel === 0 || screenChannel === 1 || screenChannel === 2)) throw new Error('screenChannel must be 0,1,2');
+  if (strength <= 0) return rgb;
+  const [ia, ib] = [0, 1, 2].filter((i) => i !== screenChannel);
+  const out = new Float32Array(rgb.length);
+  const n = rgb.length / 3;
+  for (let p = 0; p < n; p++) {
+    const o = p * 3;
+    const s = rgb[o + screenChannel], a = rgb[o + ia], b = rgb[o + ib];
+    const limit = limitMode === 'max' ? Math.max(a, b) : (a + b) / 2;
+    const spill = Math.max(s - limit, 0);
+    const ns = s - spill, na = a + spill * 0.5, nb = b + spill * 0.5;
+    if (strength < 1) {
+      out[o + screenChannel] = s * (1 - strength) + ns * strength;
+      out[o + ia] = a * (1 - strength) + na * strength;
+      out[o + ib] = b * (1 - strength) + nb * strength;
+    } else {
+      out[o + screenChannel] = ns; out[o + ia] = na; out[o + ib] = nb;
+    }
+  }
+  return out;
+}
+
+const CHECK_A = srgbToLinear(0.15);
+const CHECK_B = srgbToLinear(0.55);
+/** create_checkerboard (size 128, sRGB 0.15 / 0.55) converted to linear. */
+function checkerLinear(x, y, size = 128) {
+  return ((Math.floor(x / size) + Math.floor(y / size)) & 1) ? CHECK_B : CHECK_A;
+}
+
+// Resampling kernels. HWC Float32Array in/out.
+
+function clampi(v, lo, hi) { return v < lo ? v > hi ? hi : v; }
+
+/** cv2.resize(..., INTER_LINEAR) equivalent (half-pixel centres, edge clamp, no prefilter). */
+function resizeBilinearPlain(src, w, h, c, dw, dh) {
+  const out = new Float32Array(dw * dh * c);
+  const sx = w / dw, sy = h / dh;
+  for (let y = 0; y < dh; y++) {
+    let fy = (y + 0.5) * sy - 0.5; const y0 = Math.floor(fy); fy -= y0;
+    const ya = clampi(y0, 0, h - 1), yb = clampi(y0 + 1, 0, h - 1);
+    for (let x = 0; x < dw; x++) {
+      let fx = (x + 0.5) * sx - 0.5; const x0 = Math.floor(fx); fx -= x0;
+      const xa = clampi(x0, 0, w - 1), xb = clampi(x0 + 1, 0, w - 1);
+      for (let k = 0; k < c; k++) {
+        const v00 = src[(ya * w + xa) * c + k], v01 = src[(ya * w + xb) * c + k];
+        const v10 = src[(yb * w + xa) * c + k], v11 = src[(yb * w + xb) * c + k];
+        out[(y * dw + x) * c + k] = (v00 * (1 - fx) + v01 * fx) * (1 - fy) + (v10 * (1 - fx) + v11 * fx) * fy;
+      }
+    }
+  }
+  return out;
+}
+
+function aaWeights(inSize, outSize) {
+  // Separable triangle filter with support scaled when downsizing (PIL / torch antialias=True formulation).
+  const scale = inSize / outSize;
+  const support = scale >= 1 ? scale : 1;
+  const inv = scale >= 1 ? 1 / scale : 1;
+  const starts = new Int32Array(outSize), counts = new Int32Array(outSize);
+  const maxK = Math.ceil(support) * 2 + 2;
+  const w = new Float32Array(outSize * maxK);
+  for (let i = 0; i < outSize; i++) {
+    const center = scale * (i + 0.5);
+    const xmin = Math.max(Math.trunc(center - support + 0.5), 0);
+    const xmax = Math.min(Math.trunc(center + support + 0.5), inSize);
+    let sum = 0, n = 0;
+    for (let j = xmin; j < xmax; j++) {
+      const t = (j - center + 0.5) * inv;
+      const v = Math.max(0, 1 - Math.abs(t));
+      w[i * maxK + n++] = v; sum += v;
+    }
+    if (sum > 0) for (let k = 0; k < n; k++) w[i * maxK + k] /= sum;
+    starts[i] = xmin; counts[i] = n;
+  }
+  return { starts, counts, w, maxK };
+}
+
+/** torchvision.transforms.v2.functional.resize(BILINEAR) on tensors (antialias=True default). */
+function resizeBilinearAA(src, w, h, c, dw, dh) {
+  const ax = aaWeights(w, dw), ay = aaWeights(h, dh);
+  const tmp = new Float32Array(dw * h * c);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < dw; x++) {
+      const s = ax.starts[x], n = ax.counts[x];
+      for (let k = 0; k < c; k++) {
+        let acc = 0;
+        for (let j = 0; j < n; j++) acc += src[(y * w + s + j) * c + k] * ax.w[x * ax.maxK + j];
+        tmp[(y * dw + x) * c + k] = acc;
+      }
+    }
+  const out = new Float32Array(dw * dh * c);
+  for (let y = 0; y < dh; y++) {
+    const s = ay.starts[y], n = ay.counts[y];
+    for (let x = 0; x < dw; x++)
+      for (let k = 0; k < c; k++) {
+        let acc = 0;
+        for (let j = 0; j < n; j++) acc += tmp[((s + j) * dw + x) * c + k] * ay.w[y * ay.maxK + j];
+        out[(y * dw + x) * c + k] = acc;
+      }
+  }
+  return out;
+}
+
+const S45 = 0.70710678118654752440;
+const CS = [[1, 0], [-S45, -S45], [0, 1], [S45, -S45], [-1, 0], [S45, S45], [0, -1], [-S45, S45]];
+function lanczos4Coeffs(x, out) { // OpenCV interpolateLanczos4
+  if (x < 1.1920929e-7) { out.fill(0); out[3] = 1; return; }
+  let sum = 0;
+  const y0 = -(x + 3) * Math.PI * 0.25, s0 = Math.sin(y0), c0 = Math.cos(y0);
+  for (let i = 0; i < 8; i++) {
+    const y = -(x + 3 - i) * Math.PI * 0.25;
+    out[i] = Math.fround((CS[i][0] * s0 + CS[i][1] * c0) / (y * y));
+    sum += out[i];
+  }
+  sum = 1 / sum;
+  for (let i = 0; i < 8; i++) out[i] *= sum;
+}
+
+/** cv2.resize(..., INTER_LANCZOS4): 8-tap, no prefilter, edge replicate (as used by the original CPU post-process). */
+function resizeLanczos4(src, w, h, c, dw, dh) {
+  const coef = (inS, outS) => {
+    const scale = inS / outS, idx = new Int32Array(outS * 8), wt = new Float32Array(outS * 8), tmp = new Float32Array(8);
+    for (let i = 0; i < outS; i++) {
+      let f = (i + 0.5) * scale - 0.5; const s = Math.floor(f); f -= s;
+      lanczos4Coeffs(f, tmp);
+      for (let k = 0; k < 8; k++) { idx[i * 8 + k] = clampi(s - 3 + k, 0, inS - 1); wt[i * 8 + k] = tmp[k]; }
+    }
+    return { idx, wt };
+  };
+  const cx = coef(w, dw), cy = coef(h, dh);
+  const tmp = new Float32Array(dw * h * c);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < dw; x++)
+      for (let k = 0; k < c; k++) {
+        let acc = 0;
+        for (let j = 0; j < 8; j++) acc += src[(y * w + cx.idx[x * 8 + j]) * c + k] * cx.wt[x * 8 + j];
+        tmp[(y * dw + x) * c + k] = acc;
+      }
+  const out = new Float32Array(dw * dh * c);
+  for (let y = 0; y < dh; y++)
+    for (let x = 0; x < dw; x++)
+      for (let k = 0; k < c; k++) {
+        let acc = 0;
+        for (let j = 0; j < 8; j++) acc += tmp[(cy.idx[y * 8 + j] * dw + x) * c + k] * cy.wt[y * 8 + j];
+        out[(y * dw + x) * c + k] = acc;
+      }
+  return out;
+}
+
+// Port of clean_matte_opencv / dilate / connected components (cv2 semantics).
+
+/** 8-connected component labelling. mask: Uint8Array (nonzero = fg). Returns {labels:Int32Array, areas:Int32Array}. */
+function connectedComponents8(mask, w, h) {
+  const parent = new Int32Array((w * h >> 1) + 2);
+  let next = 1;
+  const labels = new Int32Array(w * h);
+  const find = (a) => { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+  const union = (a, b) => { a = find(a); b = find(b); if (a !== b) { if (a < b) parent[b] = a; else parent[a] = b; } };
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (!mask[i]) continue;
+      const a = x > 0 ? labels[i - 1] : 0, b = y > 0 && x > 0 ? labels[i - w - 1] : 0;
+      const c = y > 0 ? labels[i - w] : 0, d = y > 0 && x < w - 1 ? labels[i - w + 1] : 0;
+      let l = a || b || c || d;
+      if (!l) { l = next; parent[l] = l; next++; }
+      else {
+        if (a && a < l) l = a; if (b && b < l) l = b; if (c && c < l) l = c; if (d && d < l) l = d;
+        if (a) union(l, a); if (b) union(l, b); if (c) union(l, c); if (d) union(l, d);
+      }
+      labels[i] = l;
+    }
+  const remap = new Int32Array(next);
+  let n = 0;
+  for (let l = 1; l < next; l++) if (find(l) === l) remap[l] = ++n;
+  const areas = new Int32Array(n + 1);
+  for (let i = 0; i < labels.length; i++) if (labels[i]) { const r = remap[find(labels[i])]; labels[i] = r; areas[r]++; }
+  return { labels, areas, count: n };
+}
+
+/** cv2.getStructuringElement(MORPH_ELLIPSE, (k,k)) row half-widths, k = 2*radius+1. */
+function ellipseRows(k) {
+  const r = k >> 1, c = k >> 1, inv = r > 0 ? 1 / (r * r) : 0;
+  const rows = [];
+  for (let i = 0; i < k; i++) {
+    const dy = i - r;
+    let dx = 0, ok = false;
+    if (Math.abs(dy) <= r) { dx = Math.round(c * Math.sqrt((r * r - dy * dy) * inv)); ok = true; }
+    rows.push(ok ? { dy, j1: Math.max(c - dx, 0) - c, j2: Math.min(c + dx + 1, k) - 1 - c } : null);
+  }
+  return rows;
+}
+
+function rowDilate(mask, w, h, half) {
+  const out = new Uint8Array(w * h), ps = new Int32Array(w + 1);
+  for (let y = 0; y < h; y++) {
+    const o = y * w;
+    for (let x = 0; x < w; x++) ps[x + 1] = ps[x] + (mask[o + x] ? 1 : 0);
+    for (let x = 0; x < w; x++) {
+      const a = Math.max(0, x - half), b = Math.min(w - 1, x + half);
+      out[o + x] = ps[b + 1] - ps[a] > 0 ? 255 : 0;
+    }
+  }
+  return out;
+}
+
+/** cv2.dilate with elliptical kernel of diameter 2*radius+1, on a binary (0/255) mask. */
+function dilateEllipse(mask, w, h, radius) {
+  if (radius <= 0) return mask;
+  const rows = ellipseRows(radius * 2 + 1);
+  const byHalf = new Map();
+  const out = new Uint8Array(w * h);
+  for (const r of rows) {
+    if (!r) continue;
+    const half = r.j2;
+    if (!byHalf.has(half)) byHalf.set(half, rowDilate(mask, w, h, half));
+    const src = byHalf.get(half);
+    for (let y = 0; y < h; y++) {
+      const sy = y + r.dy;
+      if (sy < 0 || sy >= h) continue;
+      const o = y * w, so = sy * w;
+      for (let x = 0; x < w; x++) out[o + x] |= src[so + x];
+    }
+  }
+  return out;
+}
+
+/** cv2.GaussianBlur(u8, (k,k), 0): sigma derived from ksize, BORDER_REFLECT_101, result rounded to u8. */
+function gaussianBlurU8(img, w, h, ksize) {
+  const sigma = 0.3 * ((ksize - 1) * 0.5 - 1) + 0.8;
+  const r = ksize >> 1, ker = new Float32Array(ksize);
+  const SMALL = { 1: [1], 3: [0.25, 0.5, 0.25], 5: [0.0625, 0.25, 0.375, 0.25, 0.0625], 7: [0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125] };
+  if (SMALL[ksize]) ker.set(SMALL[ksize]);
+  else {
+    let s = 0;
+    for (let i = 0; i < ksize; i++) { const d = i - r; ker[i] = Math.exp(-(d * d) / (2 * sigma * sigma)); s += ker[i]; }
+    for (let i = 0; i < ksize; i++) ker[i] /= s;
+  }
+  const refl = (i, n) => { if (n === 1) return 0; while (i < 0 || i >= n) i = i < 0 ? -i : 2 * (n - 1) - i; return i; };
+  const tmp = new Float32Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      let a = 0;
+      for (let k = -r; k <= r; k++) a += img[y * w + refl(x + k, w)] * ker[k + r];
+      tmp[y * w + x] = a;
+    }
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      let a = 0;
+      for (let k = -r; k <= r; k++) a += tmp[refl(y + k, h) * w + x] * ker[k + r];
+      out[y * w + x] = Math.min(255, Math.max(0, Math.round(a)));
+    }
+  return out;
+}
+
+/** clean_matte_opencv: drop connected islands (>0.5) smaller than areaThreshold, dilate, blur, multiply. alpha: Float32 [h*w]. */
+function cleanMatte(alpha, w, h, areaThreshold = 300, dilation = 15, blurSize = 5) {
+  const mask = new Uint8Array(w * h);
+  for (let i = 0; i < mask.length; i++) mask[i] = alpha[i] > 0.5 ? 255 : 0;
+  const { labels, areas } = connectedComponents8(mask, w, h);
+  let cleaned = new Uint8Array(w * h);
+  for (let i = 0; i < cleaned.length; i++) if (labels[i] && areas[labels[i]] >= areaThreshold) cleaned[i] = 255;
+  if (dilation > 0) cleaned = dilateEllipse(cleaned, w, h, dilation);
+  if (blurSize > 0) cleaned = gaussianBlurU8(cleaned, w, h, blurSize * 2 + 1);
+  const out = new Float32Array(w * h);
+  for (let i = 0; i < out.length; i++) out[i] = alpha[i] * (cleaned[i] / 255);
+  return out;
+}
+
+// Rough alpha-hint generator. NOT part of CorridorKey (which requires a user/GVM/VideoMaMa/BiRefNet hint);
+// provided so a hint can be produced inside the browser. Works on the despill-style screen-dominance measure.
+
+/** params: {screenChannel, threshold(0-1), softness(0-1), erode(px), feather(px)}. Returns Float32Array [w*h]. */
+function generateHint(rgba, w, h, { screenChannel = 1, threshold = 0.12, softness = 0.1, erode = 6, feather = 8 } = {}) {
+  const [ia, ib] = [0, 1, 2].filter((i) => i !== screenChannel);
+  const n = w * h, soft = Math.max(softness, 1e-4);
+  let u8 = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const s = rgba[i * 4 + screenChannel] / 255, a = rgba[i * 4 + ia] / 255, b = rgba[i * 4 + ib] / 255;
+    const score = s - (a + b) / 2;
+    u8[i] = Math.round(Math.min(1, Math.max(0, (threshold - score) / soft + 0.5)) * 255);
+  }
+  if (erode > 0) {
+    const bgMask = new Uint8Array(n);
+    for (let i = 0; i < n; i++) bgMask[i] = u8[i] < 128 ? 255 : 0;
+    const grown = dilateEllipse(bgMask, w, h, erode);
+    for (let i = 0; i < n; i++) if (grown[i]) u8[i] = 0;
+  }
+  if (feather > 0) u8 = gaussianBlurU8(u8, w, h, feather * 2 + 1);
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = u8[i] / 255;
+  return out;
+}
+
+const MEAN = [0.485, 0.456, 0.406], STD = [0.229, 0.224, 0.225];
+
+function preprocess(rgba, hint, w, h, S) {
+  const rgb = new Float32Array(w * h * 3);
+  for (let i = 0, p = 0; i < w * h; i++, p += 3) {
+    rgb[p] = rgba[i * 4] / 255; rgb[p + 1] = rgba[i * 4 + 1] / 255; rgb[p + 2] = rgba[i * 4 + 2] / 255;
+  }
+  const rs = (w === S && h === S) ? rgb : resizeBilinearAA(rgb, w, h, 3, S, S);
+  const hs = (w === S && h === S) ? hint : resizeBilinearAA(hint, w, h, 1, S, S);
+  const out = new Float32Array(4 * S * S), n = S * S;
+  for (let i = 0; i < n; i++) {
+    out[i] = (rs[i * 3] - MEAN[0]) / STD[0];
+    out[n + i] = (rs[i * 3 + 1] - MEAN[1]) / STD[1];
+    out[2 * n + i] = (rs[i * 3 + 2] - MEAN[2]) / STD[2];
+    out[3 * n + i] = hs[i];
+  }
+  return out;
+}
+
+function postprocess(alphaS, fgS, S, w, h, opts = {}) {
+  const { screenChannel = 1, despillStrength = 1, autoDespeckle = true, despeckleSize = 400, resize = 'bilinear' } = opts;
+  const n = S * S;
+  const fgHWC = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { fgHWC[i * 3] = fgS[i]; fgHWC[i * 3 + 1] = fgS[n + i]; fgHWC[i * 3 + 2] = fgS[2 * n + i]; }
+  const rs = resize === 'lanczos4' ? resizeLanczos4 : resizeBilinearAA;
+  const same = S === w && S === h;
+  const alphaRaw = same ? alphaS : rs(alphaS, S, S, 1, w, h);
+  const fgRaw = same ? fgHWC : rs(fgHWC, S, S, 3, w, h);
+  const alpha = autoDespeckle ? cleanMatte(alphaRaw, w, h, despeckleSize, 25, 5) : alphaRaw;
+  const fg = despill(fgRaw, despillStrength, screenChannel, 'average');
+  return { w, h, alphaRaw, alpha, fgRaw, fg };
+}
+
+const N = 4096;
+const S2L = new Float32Array(N + 2), L2S = new Float32Array(N + 2);
+for (let i = 0; i <= N + 1; i++) { S2L[i] = srgbToLinear(i / N); L2S[i] = linearToSrgb(i / N); }
+const lut = (t, x) => { if (x <= 0) return t[0]; if (x >= 1) return t[N]; const f = x * N, i = f | 0; return t[i] + (t[i + 1] - t[i]) * (f - i); };
+
+function renderComp(res, bg, exact = false) {
+  const { w, h, alpha, fg } = res;
+  const out = new Uint8ClampedArray(w * h * 4);
+  const s2l = exact ? srgbToLinear : (x) => lut(S2L, x), l2s = exact ? linearToSrgb : (x) => lut(L2S, x);
+  const bgc = bg.type === 'color' ? bg.rgb.map(srgbToLinear) : null;
+  const u8 = new Float32Array(256); for (let i = 0; i < 256; i++) u8[i] = srgbToLinear(i / 255);
+  for (let y = 0, i = 0; y < h; y++)
+    for (let x = 0; x < w; x++, i++) {
+      const a = Math.min(1, Math.max(0, alpha[i]));
+      let b0, b1, b2;
+      if (bg.type === 'checker') { b0 = b1 = b2 = checkerLinear(x, y); }
+      else if (bgc) { [b0, b1, b2] = bgc; }
+      else { b0 = u8[bg.rgba[i * 4]]; b1 = u8[bg.rgba[i * 4 + 1]]; b2 = u8[bg.rgba[i * 4 + 2]]; }
+      const o = i * 4;
+      out[o] = l2s(s2l(fg[i * 3]) * a + b0 * (1 - a)) * 255;
+      out[o + 1] = l2s(s2l(fg[i * 3 + 1]) * a + b1 * (1 - a)) * 255;
+      out[o + 2] = l2s(s2l(fg[i * 3 + 2]) * a + b2 * (1 - a)) * 255;
+      out[o + 3] = 255;
+    }
+  return out;
+}
+
+function renderStraight(res) {
+  const { w, h, alpha, fg } = res, out = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    out[i * 4] = fg[i * 3] * 255; out[i * 4 + 1] = fg[i * 3 + 1] * 255; out[i * 4 + 2] = fg[i * 3 + 2] * 255;
+    out[i * 4 + 3] = alpha[i] * 255;
+  }
+  return out;
+}
+function renderAlpha(res) {
+  const { w, h, alpha } = res, out = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) { const v = alpha[i] * 255; out[i * 4] = out[i * 4 + 1] = out[i * 4 + 2] = v; out[i * 4 + 3] = 255; }
+  return out;
+}
+function renderFg(res) {
+  const { w, h, fg } = res, out = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) { out[i * 4] = fg[i * 3] * 255; out[i * 4 + 1] = fg[i * 3 + 1] * 255; out[i * 4 + 2] = fg[i * 3 + 2] * 255; out[i * 4 + 3] = 255; }
+  return out;
+}
+function renderSpillDiff(res) {
+  const { w, h, fg, fgRaw } = res, out = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    const d = (Math.abs(fgRaw[i*3]-fg[i*3]) + Math.abs(fgRaw[i*3+1]-fg[i*3+1]) + Math.abs(fgRaw[i*3+2]-fg[i*3+2])) * 4 * 255;
+    out[i*4] = out[i*4+1] = out[i*4+2] = d; out[i*4+3] = 255;
+  }
+  return out;
+}
+
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(buf, crc = 0) { crc = ~crc >>> 0; for (let i = 0; i < buf.length; i++) crc = CRC[(crc ^ buf[i]) & 255] ^ (crc >>> 8); return ~crc >>> 0; }
+function chunk(type, data) {
+  const out = new Uint8Array(12 + data.length), dv = new DataView(out.buffer);
+  dv.setUint32(0, data.length); for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+  out.set(data, 8); dv.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+  return out;
+}
+async function deflate(bytes) {
+  const cs = new CompressionStream('deflate');
+  const w = cs.writable.getWriter(); w.write(bytes); w.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+async function encodePNG(rgba, w, h) {
+  const stride = w * 4, raw = new Uint8Array((stride + 1) * h);
+  for (let y = 0; y < h; y++) {
+    const ro = y * (stride + 1), so = y * stride;
+    raw[ro] = 1;
+    for (let i = 0; i < stride; i++) raw[ro + 1 + i] = (rgba[so + i] - (i >= 4 ? rgba[so + i - 4] : 0)) & 255;
+  }
+  const ihdr = new Uint8Array(13), dv = new DataView(ihdr.buffer);
+  dv.setUint32(0, w); dv.setUint32(4, h); ihdr[8] = 8; ihdr[9] = 6;
+  const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', await deflate(raw)), chunk('IEND', new Uint8Array(0))];
+  const out = new Uint8Array(parts.reduce((a, p) => a + p.length, 0)); let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+
+let src = null, hint = null, raw = null, res = null, bgImage = null;
+const gray = (h, w) => { const o = new Uint8ClampedArray(w * h * 4); for (let i = 0; i < w * h; i++) { o[i*4] = o[i*4+1] = o[i*4+2] = hint[i] * 255; o[i*4+3] = 255; } return o; };
+const bgOf = (bg) => (bg.type === 'image' ? { type: 'image', rgba: bgImage } : bg);
+function view(v, bg) {
+  if (!res) throw new Error('No result yet');
+  switch (v) {
+    case 'comp': return renderComp(res, bgOf(bg));
+    case 'alpha': return renderAlpha(res);
+    case 'fg': return renderFg(res);
+    case 'spill': return renderSpillDiff(res);
+    case 'hint': return gray(src.h, src.w);
+    default: throw new Error('unknown view ' + v);
+  }
+}
+
+self.onmessage = async (e) => {
+  const { id, type, ...a } = e.data;
+  try {
+    let reply = {}, xfer = [];
+    switch (type) {
+      case 'source': src = { rgba: new Uint8ClampedArray(a.rgba), w: a.w, h: a.h }; hint = null; raw = null; res = null; break;
+      case 'hint-generate': {
+        hint = generateHint(src.rgba, src.w, src.h, a.params);
+        const p = gray(src.h, src.w); reply = { rgba: p.buffer }; xfer = [p.buffer]; break;
+      }
+      case 'hint-upload': {
+        const r = new Uint8ClampedArray(a.rgba); hint = new Float32Array(src.w * src.h);
+        for (let i = 0; i < hint.length; i++) hint[i] = (0.299 * r[i*4] + 0.587 * r[i*4+1] + 0.114 * r[i*4+2]) / 255;
+        const p = gray(src.h, src.w); reply = { rgba: p.buffer }; xfer = [p.buffer]; break;
+      }
+      case 'pre': {
+        if (!hint) throw new Error('No alpha hint: generate or upload one first.');
+        const t = preprocess(src.rgba, hint, src.w, src.h, a.S); reply = { tensor: t.buffer }; xfer = [t.buffer]; break;
+      }
+      case 'post': raw = { alpha: new Float32Array(a.alpha), fg: new Float32Array(a.fg), S: a.S };
+      case 'repost': {
+        if (!raw) throw new Error('Run the model first.');
+        res = postprocess(raw.alpha, raw.fg, raw.S, src.w, src.h, a.opts); break;
+      }
+      case 'set-bg': bgImage = new Uint8ClampedArray(a.rgba); break;
+      case 'render': { const o = view(a.view, a.bg || { type: 'checker' }); reply = { rgba: o.buffer }; xfer = [o.buffer]; break; }
+      case 'png': {
+        const o = a.mode === 'straight' ? renderStraight(res) : a.mode === 'alpha' ? renderAlpha(res) : renderComp(res, bgOf(a.bg || { type: 'checker' }), true);
+        const png = await encodePNG(o, src.w, src.h); reply = { png: png.buffer }; xfer = [png.buffer]; break;
+      }
+      default: throw new Error('unknown message ' + type);
+    }
+    self.postMessage({ id, ok: true, ...reply }, xfer);
+  } catch (err) { self.postMessage({ id, ok: false, error: err?.message || String(err) }); }
+};
+</script>
+<script>
+(() => {
+const CONFIG = {
+  ortCdn: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
+  models: { green: null, blue: null },
+  cacheName: 'corridorkey-models-v1',
+};
+function modelUrlFor(channel) {
+  const q = new URLSearchParams(globalThis.location?.search || '').get('model');
+  if (q) return q;
+  return channel === 2 ? CONFIG.models.blue : CONFIG.models.green;
+}
+
+const GF = (() => {
+const WEIGHTS_LOCATION = 'weights.safetensors';
+
+function parseSafetensors(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  const n = Number(dv.getBigUint64(0, true));
+  const tensors = JSON.parse(new TextDecoder().decode(u8.subarray(8, 8 + n)));
+  delete tensors.__metadata__;
+  return { tensors, base: 8 + n, bytes: u8 };
+}
+function f32view(st, key) {
+  const t = st.tensors[key]; if (!t) throw new Error('Missing tensor ' + key);
+  if (t.dtype !== 'F32') throw new Error(`Tensor ${key} is ${t.dtype}; only float32 checkpoints are supported.`);
+  const off = st.bytes.byteOffset + st.base + t.data_offsets[0], len = (t.data_offsets[1] - t.data_offsets[0]) / 4;
+  return off % 4 === 0 ? new Float32Array(st.bytes.buffer, off, len) : new Float32Array(st.bytes.slice(st.base + t.data_offsets[0], st.base + t.data_offsets[1]).buffer);
+}
+
+const te = new TextEncoder();
+function varint(n) { let v = BigInt.asUintN(64, BigInt(n)); const o = []; while (v >= 0x80n) { o.push(Number(v & 0x7fn) | 0x80); v >>= 7n; } o.push(Number(v)); return Uint8Array.from(o); }
+function cat(parts) { let n = 0; for (const p of parts) n += p.length; const o = new Uint8Array(n); let k = 0; for (const p of parts) { o.set(p, k); k += p.length; } return o; }
+const tag = (f, wt) => varint(f * 8 + wt);
+const fVar = (f, n) => cat([tag(f, 0), varint(n)]);
+const fBytes = (f, u8) => cat([tag(f, 2), varint(u8.length), u8]);
+const fStr = (f, s) => fBytes(f, te.encode(s));
+const fFloat = (f, x) => { const b = new Uint8Array(4); new DataView(b.buffer).setFloat32(0, x, true); return cat([tag(f, 5), b]); };
+
+const DT_FLOAT = 1, DT_INT64 = 7;
+function tensorProto({ name, dims, dtype, raw, ext }) {
+  const p = [];
+  for (const d of dims) p.push(fVar(1, d));
+  p.push(fVar(2, dtype), fStr(8, name));
+  if (ext) {
+    p.push(fBytes(13, cat([fStr(1, 'location'), fStr(2, ext.location)])));
+    p.push(fBytes(13, cat([fStr(1, 'offset'), fStr(2, String(ext.offset))])));
+    p.push(fBytes(13, cat([fStr(1, 'length'), fStr(2, String(ext.length))])));
+    p.push(fVar(14, 1));
+  } else p.push(fBytes(9, raw));
+  return cat(p);
+}
+function attrProto(name, v) {
+  if (typeof v === 'string') return cat([fStr(1, name), fBytes(4, te.encode(v)), fVar(20, 3)]);
+  if (Array.isArray(v)) return cat([fStr(1, name), ...v.map((x) => fVar(8, x)), fVar(20, 7)]);
+  if (Number.isInteger(v)) return cat([fStr(1, name), fVar(3, v), fVar(20, 2)]);
+  return cat([fStr(1, name), fFloat(2, v), fVar(20, 1)]);
+}
+function nodeProto(op, inputs, outputs, attrs, name) {
+  return cat([...inputs.map((s) => fStr(1, s)), ...outputs.map((s) => fStr(2, s)), fStr(3, name), fStr(4, op), ...Object.entries(attrs).map(([k, v]) => fBytes(5, attrProto(k, v)))]);
+}
+function valueInfo(name, dims) {
+  const shape = dims ? cat(dims.map((d) => fBytes(1, fVar(1, d)))) : null;
+  const tt = cat([fVar(1, DT_FLOAT), ...(shape ? [fBytes(2, shape)] : [])]);
+  return cat([fStr(1, name), fBytes(2, fBytes(1, tt))]);
+}
+
+class G {
+  constructor(st, location) { this.st = st; this.loc = location; this.nodes = []; this.inits = []; this.have = new Set(); this.k = 0; this.cache = new Map(); }
+  id(p) { return `${p}_${this.k++}`; }
+  op(type, inputs, attrs = {}, nOut = 1) {
+    const outs = Array.from({ length: nOut }, () => this.id(type));
+    this.nodes.push(nodeProto(type, inputs, outs, attrs, this.id('n')));
+    return nOut === 1 ? outs[0] : outs;
+  }
+  W(key, dims) {
+    const t = this.st.tensors[key]; if (!t) throw new Error('Missing tensor ' + key);
+    if (t.dtype !== 'F32') throw new Error(`Tensor ${key} is ${t.dtype}; only float32 checkpoints are supported.`);
+    const name = dims ? `${key}#${dims.join('x')}` : key;
+    if (!this.have.has(name)) {
+      this.have.add(name);
+      this.inits.push(tensorProto({ name, dims: dims || t.shape, dtype: DT_FLOAT, ext: { location: this.loc, offset: this.st.base + t.data_offsets[0], length: t.data_offsets[1] - t.data_offsets[0] } }));
+    }
+    return name;
+  }
+  inlineF32(name, f32, dims) { this.inits.push(tensorProto({ name, dims, dtype: DT_FLOAT, raw: new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength) })); return name; }
+  i64(arr) { const key = 'i64:' + arr.join(','); if (this.cache.has(key)) return this.cache.get(key); const name = this.id('c'); const b = new BigInt64Array(arr.map(BigInt)); this.inits.push(tensorProto({ name, dims: [], dtype: DT_INT64, raw: new Uint8Array(b.buffer) })); this.cache.set(key, name); return name; }
+  i64s(v) { const key = 'i64s:' + v; if (this.cache.has(key)) return this.cache.get(key); const name = this.id('c'); this.inits.push(tensorProto({ name, dims: [], dtype: DT_INT64, raw: new Uint8Array(new BigInt64Array([BigInt(v)]).buffer) })); this.cache.set(key, name); return name; }
+  f32c(v, dims = []) { const key = `f32:${v}:${dims}`; if (this.cache.has(key)) return this.cache.get(key); const n = dims.reduce((a, b) => a * b, 1), a = new Float32Array(n).fill(v); const name = this.id('c'); this.inits.push(tensorProto({ name, dims, dtype: DT_FLOAT, raw: new Uint8Array(a.buffer) })); this.cache.set(key, name); return name; }
+  reshape(x, dims) { return this.op('Reshape', [x, this.i64(dims)]); }
+  transpose(x, perm) { return this.op('Transpose', [x], { perm }); }
+}
+
+const linear = (g, x, key) => g.op('Gemm', [x, g.W(key + '.weight'), g.W(key + '.bias')], { transB: 1 });
+const layerNorm = (g, x, key) => g.op('LayerNormalization', [x, g.W(key + '.weight'), g.W(key + '.bias')], { axis: -1, epsilon: 1e-6 });
+function gelu(g, x) { const e = g.op('Erf', [g.op('Mul', [x, g.f32c(Math.SQRT1_2)])]); return g.op('Mul', [g.op('Mul', [x, g.f32c(0.5)]), g.op('Add', [e, g.f32c(1)])]); }
+const conv = (g, x, key, { k = 3, dil = 1, bias = true } = {}) => {
+  const pad = dil * (k - 1) / 2;
+  return g.op('Conv', [x, g.W(key + '.weight'), ...(bias ? [g.W(key + '.bias')] : [])], { pads: [pad, pad, pad, pad], dilations: [dil, dil], strides: [1, 1] });
+};
+function groupNorm8(g, x, key, C, H, W) {
+  const r = g.reshape(x, [1, 8, -1]);
+  const n = g.op('InstanceNormalization', [r, g.f32c(1, [8]), g.f32c(0, [8])], { epsilon: 1e-5 });
+  const back = g.reshape(n, [1, C, H, W]);
+  return g.op('Add', [g.op('Mul', [back, g.W(key + '.weight', [1, C, 1, 1])]), g.W(key + '.bias', [1, C, 1, 1])]);
+}
+const resize = (g, x, dims) => g.op('Resize', [x, '', '', g.i64(dims)], { mode: 'linear', coordinate_transformation_mode: 'half_pixel' });
+function attention(g, xn, H, W, Co, heads, win, qpool, pfx) {
+  const hd = Co / heads, w = win || H, nWy = H / w, nWx = W / w, nW = nWy * nWx, T = H * W;
+  if (H % w || W % w || (qpool && w % 2)) throw new Error(`Inference size incompatible with attention windows (H=${H}, window=${w}).`);
+  const qkv = g.reshape(linear(g, xn, pfx + '.attn.qkv'), [T, 3, heads, hd]);
+  const pick = (i) => g.op('Gather', [qkv, g.i64s(i)], { axis: 1 });
+  const flat = !win && !qpool;
+  const part = (t, pool) => {
+    if (flat) return g.reshape(g.transpose(t, [1, 0, 2]), [1, heads, T, hd]);
+    let s = g.reshape(t, [nWy, w, nWx, w, heads, hd]);
+    if (pool) {
+      s = g.reshape(s, [nWy, w / 2, 2, nWx, w / 2, 2, heads, hd]);
+      s = g.op('ReduceMax', [s], { axes: [2, 5], keepdims: 0 });
+      return g.reshape(g.transpose(s, [0, 2, 4, 1, 3, 5]), [nWy * nWx, heads, (w / 2) * (w / 2), hd]);
+    }
+    return g.reshape(g.transpose(s, [0, 2, 4, 1, 3, 5]), [nWy * nWx, heads, w * w, hd]);
+  };
+  const q = g.op('Mul', [part(pick(0), qpool), g.f32c(Math.pow(hd, -0.5))]);
+  const k = part(pick(1), false), v = part(pick(2), false);
+  const kT = g.transpose(k, [0, 1, 3, 2]);
+  const Tq = qpool ? (w / 2) * (w / 2) : w * w, Tk = w * w;
+  const nCh = Math.min(256, Math.max(1, Math.ceil((nW * heads * Tq * Tk) / g.attChunk)));
+  const step = Math.ceil(Tq / nCh), outs = [];
+  for (let s0 = 0; s0 < Tq; s0 += step) {
+    const qc = nCh === 1 ? q : g.op('Slice', [q, g.i64([s0]), g.i64([Math.min(Tq, s0 + step)]), g.i64([2])]);
+    outs.push(g.op('MatMul', [g.op('Softmax', [g.op('MatMul', [qc, kT])], { axis: -1 }), v]));
+  }
+  const o = outs.length === 1 ? outs[0] : g.op('Concat', outs, { axis: 2 });
+  if (flat) return linear(g, g.reshape(g.transpose(o, [0, 2, 1, 3]), [T, Co]), pfx + '.attn.proj');
+  const wq = qpool ? w / 2 : w, Hq = qpool ? H / 2 : H, Wq = qpool ? W / 2 : W;
+  const m = g.reshape(g.transpose(g.reshape(o, [nWy, nWx, heads, wq, wq, hd]), [0, 3, 1, 4, 2, 5]), [Hq * Wq, Co]);
+  return linear(g, m, pfx + '.attn.proj');
+}
+function block(g, x, H, W, i, cfg) {
+  const pfx = `encoder.model.blocks.${i}`, { Co, heads, win, qpool, expand } = cfg;
+  const xn = layerNorm(g, x, pfx + '.norm1');
+  let res = x;
+  if (expand) {
+    const p = linear(g, xn, pfx + '.proj');
+    res = g.reshape(g.op('ReduceMax', [g.reshape(p, [H / 2, 2, W / 2, 2, Co])], { axes: [1, 3], keepdims: 0 }), [(H / 2) * (W / 2), Co]);
+  }
+  const a = attention(g, xn, H, W, Co, heads, win, qpool, pfx);
+  let y = g.op('Add', [res, a]);
+  const m = linear(g, gelu(g, linear(g, layerNorm(g, y, pfx + '.norm2'), pfx + '.mlp.fc1')), pfx + '.mlp.fc2');
+  y = g.op('Add', [y, m]);
+  return qpool ? { y, H: H / 2, W: W / 2 } : { y, H, W };
+}
+function decoder(g, feats, pfx, Gs) {
+  const parts = [];
+  for (const i of [3, 2, 1, 0]) {
+    const f = feats[i];
+    let y = linear(g, f.x, `${pfx}.linear_c${i + 1}.proj`);
+    y = g.transpose(g.reshape(y, [1, f.H, f.W, 256]), [0, 3, 1, 2]);
+    if (f.H !== Gs) y = resize(g, y, [1, 256, Gs, Gs]);
+    parts.push(y);
+  }
+  let c = conv(g, g.op('Concat', parts, { axis: 1 }), pfx + '.linear_fuse', { k: 1, bias: false });
+  c = g.op('BatchNormalization', [c, g.W(pfx + '.bn.weight'), g.W(pfx + '.bn.bias'), g.W(pfx + '.bn.running_mean'), g.W(pfx + '.bn.running_var')], { epsilon: 1e-5 });
+  return conv(g, g.op('Relu', [c]), pfx + '.classifier', { k: 1 });
+}
+function refiner(g, rgb, coarse, S) {
+  let x = conv(g, g.op('Concat', [rgb, coarse], { axis: 1 }), 'refiner.stem.0');
+  x = g.op('Relu', [groupNorm8(g, x, 'refiner.stem.1', 64, S, S)]);
+  for (const [name, d] of [['res1', 1], ['res2', 2], ['res3', 4], ['res4', 8]]) {
+    let o = conv(g, x, `refiner.${name}.conv1`, { dil: d });
+    o = g.op('Relu', [groupNorm8(g, o, `refiner.${name}.gn1`, 64, S, S)]);
+    o = groupNorm8(g, conv(g, o, `refiner.${name}.conv2`, { dil: d }), `refiner.${name}.gn2`, 64, S, S);
+    x = g.op('Relu', [g.op('Add', [o, x])]);
+  }
+  return g.op('Mul', [conv(g, x, 'refiner.final', { k: 1 }), g.f32c(10)]);
+}
+function resizePosEmbed(src, gs, gd, C) {
+  if (gs === gd) return src;
+  const A = -0.75, scale = gs / gd;
+  const taps = (n_in) => {
+    const idx = new Int32Array(gd * 4), wt = new Float32Array(gd * 4);
+    for (let o = 0; o < gd; o++) {
+      const real = (o + 0.5) * scale - 0.5, f = Math.floor(real), t = real - f;
+      const w0 = ((A * (t + 1) - 5 * A) * (t + 1) + 8 * A) * (t + 1) - 4 * A, w1 = ((A + 2) * t - (A + 3)) * t * t + 1;
+      const u = 1 - t, w2 = ((A + 2) * u - (A + 3)) * u * u + 1, w3 = 1 - w0 - w1 - w2;
+      [w0, w1, w2, w3].forEach((w, j) => { wt[o * 4 + j] = w; idx[o * 4 + j] = Math.min(n_in - 1, Math.max(0, f - 1 + j)); });
+    }
+    return { idx, wt };
+  };
+  const t = taps(gs), tmp = new Float32Array(gs * gd * C);
+  for (let y = 0; y < gs; y++) for (let x = 0; x < gd; x++) for (let c = 0; c < C; c++) {
+    let a = 0; for (let j = 0; j < 4; j++) a += src[(y * gs + t.idx[x * 4 + j]) * C + c] * t.wt[x * 4 + j];
+    tmp[(y * gd + x) * C + c] = a;
+  }
+  const out = new Float32Array(gd * gd * C);
+  for (let y = 0; y < gd; y++) for (let x = 0; x < gd; x++) for (let c = 0; c < C; c++) {
+    let a = 0; for (let j = 0; j < 4; j++) a += tmp[(t.idx[y * 4 + j] * gd + x) * C + c] * t.wt[y * 4 + j];
+    out[(y * gd + x) * C + c] = a;
+  }
+  return out;
+}
+function buildGreenFormer(st, S, { debug = false, location = WEIGHTS_LOCATION, attChunk = 1 << 24 } = {}) {
+  if (S % 64) throw new Error('Inference size must be a multiple of 64.');
+  const g = new G(st, location), Gs = S / 4; g.attChunk = attChunk;
+  const cfgs = [];
+  { let mu = 8;
+    for (let i = 0; i < 24; i++) {
+      const stage = i < 2 ? 0 : i < 5 ? 1 : i < 21 ? 2 : 3, expand = i === 2 || i === 5 || i === 21;
+      const Co = 112 << stage, heads = 2 << stage, maskAttn = i <= 5;
+      cfgs.push({ Co, heads, expand, qpool: expand, win: maskAttn ? mu : 0 });
+      if (expand && i !== 21) mu /= 2;
+    }
+  }
+  const x0 = 'input';
+  let t = g.op('Conv', [x0, g.W('encoder.model.patch_embed.proj.weight'), g.W('encoder.model.patch_embed.proj.bias')], { pads: [3, 3, 3, 3], strides: [4, 4], dilations: [1, 1] });
+  t = g.reshape(g.transpose(t, [0, 2, 3, 1]), [Gs * Gs, 112]);
+  const pe = st.tensors['encoder.model.pos_embed'], gs = Math.round(Math.sqrt(pe.shape[1]));
+  const posName = gs === Gs ? g.W('encoder.model.pos_embed', [Gs * Gs, 112]) : g.inlineF32('pos_embed_resized', resizePosEmbed(f32view(st, 'encoder.model.pos_embed'), gs, Gs, 112), [Gs * Gs, 112]);
+  let x = g.op('Add', [t, posName]), H = Gs, W = Gs;
+  const feats = [], ends = new Set([1, 4, 20, 23]);
+  for (let i = 0; i < 24; i++) {
+    const r = block(g, x, H, W, i, cfgs[i]); x = r.y; H = r.H; W = r.W;
+    if (ends.has(i)) feats.push({ x, H, W });
+  }
+  const aLog = decoder(g, feats, 'alpha_decoder', Gs), fLog = decoder(g, feats, 'fg_decoder', Gs);
+  const aUp = resize(g, aLog, [1, 1, S, S]), fUp = resize(g, fLog, [1, 3, S, S]);
+  const rgb = g.op('Slice', [x0, g.i64([0]), g.i64([3]), g.i64([1])]);
+  const coarse = g.op('Concat', [g.op('Sigmoid', [aUp]), g.op('Sigmoid', [fUp])], { axis: 1 });
+  const delta = g.op('Mul', [refiner(g, rgb, coarse, S), 'refiner_scale']);
+  const logits = g.op('Add', [g.op('Concat', [aUp, fUp], { axis: 1 }), delta]);
+  const sig = g.op('Sigmoid', [logits]);
+  const alpha = g.op('Slice', [sig, g.i64([0]), g.i64([1]), g.i64([1])]), fg = g.op('Slice', [sig, g.i64([1]), g.i64([4]), g.i64([1])]);
+  g.nodes.push(nodeProto('Identity', [alpha], ['alpha'], {}, 'out_alpha'), nodeProto('Identity', [fg], ['fg'], {}, 'out_fg'));
+  const outputs = [valueInfo('alpha', [1, 1, S, S]), valueInfo('fg', [1, 3, S, S])];
+  if (debug) feats.forEach((f, i) => { g.nodes.push(nodeProto('Identity', [f.x], ['feat' + (i + 1)], {}, 'dbg' + i)); outputs.push(valueInfo('feat' + (i + 1), null)); });
+  const graph = cat([...g.nodes.map((n) => fBytes(1, n)), fStr(2, 'GreenFormer'), ...g.inits.map((n) => fBytes(5, n)),
+    fBytes(11, valueInfo('input', [1, 4, S, S])), fBytes(11, valueInfo('refiner_scale', [])), ...outputs.map((o) => fBytes(12, o))]);
+  const model = cat([fVar(1, 8), fStr(2, 'corridorkey-web'), fBytes(7, graph), fBytes(8, cat([fStr(1, ''), fVar(2, 17)]))]);
+  return { model, location, S };
+}
+return { parseSafetensors, buildGreenFormer, WEIGHTS_LOCATION };
+})();
+
+const state = {
+  st: null,
+  model: null,
+};
+
+function $(id) { return document.getElementById(id); }
+function showErr(msg) { $('err').textContent = msg || ''; }
+function setStatus(msg) { $('status').textContent = msg; }
+function mstat(msg) { $('modelstat').textContent = msg; }
+function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+function guard(fn) { return async (...args) => { try { await fn(...args); } catch (e) { showErr(String(e?.message || e)); } }; }
+function hasWebGPU() { return !!(globalThis.navigator && 'gpu' in navigator); }
+
+let st = { w: 0, h: 0, zoom: 1, media: null, orig: null, bg: { type: 'checker' }, hintReady: false, hasRaw: false, hasResult: false, cancel: false, fps: 24 };
+let info = null, session = null, loadedKey = null, loading = null, stFile = null, loadedSize = 0, gpu = null;
+
+const snapSize = (v) => Math.max(256, Math.min(2048, Math.round((+v || 1024) / 64) * 64));
+const sizeOf = () => ($('stsize').value === 'custom' ? snapSize($('stcustom').value) : +$('stsize').value);
+const syncSizeUI = () => { $('customsize').hidden = $('stsize').value !== 'custom'; };
+const showGpuInfo = () => { $('gpuinfo').textContent = gpu ? `GPU buffer limit ${(gpu.buf / 1048576).toFixed(0)} MB · fits sizes up to about ${maxSizeForBuf(gpu.buf)} px (total memory may limit sooner)` : ''; };
+
+function probeGpu() {
+  if (!hasWebGPU()) return Promise.resolve(null);
+  return navigator.gpu.requestAdapter().then((adapter) => adapter ? adapter.requestDevice().then((device) => ({ buf: 512 * 1024 * 1024, device })) : null).catch(() => null);
+}
+function maxSizeForBuf(bytes) {
+  const mb = bytes / (1024 * 1024);
+  return Math.max(512, Math.round(256 * Math.sqrt(mb / 32)));
+}
+function bufNeed(S) { return 4 * S * S * 4 * 4; }
+
 const readFileFresh = async (file) => {
   if (!file) throw new Error('No file provided.');
   const buffer = await file.arrayBuffer();
   return new File([buffer], file.name, { type: file.type, lastModified: file.lastModified });
 };
+
 const loadST = async () => {
   if (!stFile) throw new Error('Load a .safetensors file first.');
   const S = sizeOf(), say = (m) => { setStatus(m); mstat(m); };
   if (gpu && $('backend').value === 'webgpu' && bufNeed(S) > gpu.buf)
     throw new Error(`Size ${S} needs GPU buffers of about ${(bufNeed(S) / 1048576).toFixed(0)} MB, but this GPU allows ${(gpu.buf / 1048576).toFixed(0)} MB. Largest size that fits: ${maxSizeForBuf(gpu.buf)}.`);
   say(`Reading ${stFile.name} (${(stFile.size / 1048576).toFixed(0)} MB)…`);
+
   let bytes;
   try {
     const fresh = await readFileFresh(stFile);
@@ -18,11 +996,22 @@ const loadST = async () => {
     stFile = null;
     throw new Error(`Could not read ${stFile ? stFile.name : 'the model'} again (${e.message}). Choose the file again with Load .safetensors.`);
   }
+
   let info;
-  try { info = await loadSafetensors(bytes, S, { backend: $('backend').value, onStatus: say }); } finally { bytes = null; } // our copy is released once the session exists
-  loadedKey = 'local-file'; loadedSize = S; st.hasRaw = st.hasResult = false;
-  mstat(`Model ready (experimental, from .safetensors) · size ${info.S} · ${info.backend}`); setStatus('Model ready'); ui();
+  try {
+    info = await loadSafetensors(bytes, S, { backend: $('backend').value, onStatus: say });
+  } finally {
+    bytes = null;
+  }
+
+  loadedKey = 'local-file';
+  loadedSize = S;
+  st.hasRaw = st.hasResult = false;
+  mstat(`Model ready (experimental, from .safetensors) · size ${info.S} · ${info.backend}`);
+  setStatus('Model ready');
+  ui();
 };
+
 $('stfile').onchange = guard(async (e) => {
   const f = e.target.files?.[0];
   if (!f) return;
@@ -37,4 +1026,37 @@ $('stfile').onchange = guard(async (e) => {
     e.target.value = '';
   }
 });
-$('stsize').onchange = guard(async () => { syncSizeUI(); if (stFile && $('stsize').value !== 'custom') await loadST(); });
+
+$('stsize').onchange = guard(async () => {
+  syncSizeUI();
+  if (stFile && $('stsize').value !== 'custom') await loadST();
+});
+
+$('stapply').onclick = guard(async () => {
+  const S = snapSize($('stcustom').value);
+  $('stcustom').value = S;
+  if (stFile) await loadST();
+});
+
+$('stmatch').onclick = () => {
+  if (!st.w) { showErr('Load an image or video first.'); return; }
+  $('stcustom').value = snapSize(Math.max(st.w, st.h));
+};
+
+$('backend').onchange = guard(async () => {
+  if (stFile) { await loadST(); return; }
+  if (loadedKey && loadedKey !== 'local-file') { loadedKey = null; await ensureModel(); }
+});
+
+function ensureModel() {
+  return Promise.resolve();
+}
+
+function ui() {
+  return null;
+}
+
+probeGpu().then((g) => { gpu = g; showGpuInfo(); });
+})();
+</script>
+</body></html>
